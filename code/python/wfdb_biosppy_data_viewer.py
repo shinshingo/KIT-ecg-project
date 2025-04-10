@@ -1,21 +1,14 @@
 import wfdb  # WFDB 라이브러리: ECG 데이터 읽기 및 주석 처리
 import biosppy  # BioSPPy 라이브러리: ECG 신호 분석
 import os  # 파일 및 디렉토리 경로 관리
-import platform  # 플랫폼 정보 확인을 위한 라이브러리
 import matplotlib.pyplot as plt  # 데이터 시각화를 위한 Matplotlib
 import numpy as np  # 수치 계산을 위한 NumPy
 
-# MIT-BIH 데이터셋에서 ECG 신호를 읽고 feature(Recurrence plot)를 시각화하는 코드
-
+# MIT-BIH 데이터셋에서 ECG 신호를 읽고 시각화하는 코드
 
 # 데이터 디렉토리 경로 및 사용할 레코드 ID 목록 설정
-if platform.system() == 'Windows': # Windows
-    data_dir = './data/mit-bih-arrhythmia-database-1.0.0/'
-elif platform.system() == 'Darwin': # macOS
-    data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
-else:
-    raise Exception("Unsupported OS") # 지원하지 않는 운영체제 예외 처리
-record_ids = ['207']  # 사용할 레코드 ID 목록
+data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
+record_ids = ['101']  # 사용할 레코드 ID 목록
 
 # 세그먼트 길이 및 ECG 채널 설정
 segment_length = 3000  # 한 번에 표시할 샘플 수
@@ -75,9 +68,8 @@ for record_id in record_ids:
         # Recurrence plot 생성 및 표시 (2행)
         ax_rp.clear()  # 이전 Recurrence plot 초기화
         rp = biosppy.features.phase_space.compute_recurrence_plot(segment_signal) # Recurrence plot 생성
-        ax_rp.imshow(rp[0], cmap='viridis', aspect='auto', interpolation='nearest')
-        # rp = biosppy.features.time_freq.compute_wavelet(segment_signal)
-        # ax_rp.imshow(rp, cmap='viridis', aspect='auto', interpolation='nearest')
+        ax_rp.imshow(rp[0], cmap='gray', aspect='auto', interpolation='nearest')
+        # ax_rp.plot(segment_signal, label='ECG Signal', color='red')  # ECG 신호 플롯
         ax_rp.set_title('Recurrence Plot')  # Recurrence plot 제목 설정
 
         fig.canvas.draw()  # 플롯 업데이트

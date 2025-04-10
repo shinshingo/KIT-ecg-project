@@ -1,12 +1,18 @@
 import wfdb  # WFDB 라이브러리: ECG 데이터 읽기 및 주석 처리
 import biosppy  # BioSPPy 라이브러리: ECG 신호 분석
 import os  # 파일 및 디렉토리 경로 관리
+import platform  # 플랫폼 정보 확인을 위한 라이브러리
 import matplotlib.pyplot as plt  # 데이터 시각화를 위한 Matplotlib
 
 # MIT-BIH 데이터셋에서 ECG 신호를 읽고 시각화하는 코드
 
 # 데이터 디렉토리 경로 및 사용할 레코드 ID 목록 설정
-data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
+if platform.system() == 'Windows': # Windows
+    data_dir = './data/mit-bih-arrhythmia-database-1.0.0/'
+elif platform.system() == 'Darwin': # macOS
+    data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
+else:
+    raise Exception("Unsupported OS") # 지원하지 않는 운영체제 예외 처리
 record_ids = ['101']  # 사용할 레코드 ID 목록
 
 # 세그먼트 길이 및 ECG 채널 설정
