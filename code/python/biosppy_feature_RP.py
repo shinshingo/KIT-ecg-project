@@ -1,3 +1,9 @@
+# =============================================================================
+# 이 파일은 MIT-BIH 부정맥 데이터베이스의 ECG(심전도) 신호를 읽어와,
+# BioSPPy 라이브러리를 이용해 신호를 분석하고, R-peak 검출 및 Recurrence Plot(재귀 플롯) 특성을 시각화합니다.
+# 키보드 좌/우 방향키로 신호 세그먼트를 이동하며, 각 세그먼트의 ECG 신호와 Recurrence Plot을 확인할 수 있습니다.
+# =============================================================================
+
 import wfdb  # WFDB 라이브러리: ECG 데이터 읽기 및 주석 처리
 import biosppy  # BioSPPy 라이브러리: ECG 신호 분석
 import os  # 파일 및 디렉토리 경로 관리
@@ -7,14 +13,16 @@ import numpy as np  # 수치 계산을 위한 NumPy
 
 # MIT-BIH 데이터셋에서 ECG 신호를 읽고 feature(Recurrence plot)를 시각화하는 코드
 
-
-# 데이터 디렉토리 경로 및 사용할 레코드 ID 목록 설정
+# 운영체제에 따라 데이터 디렉토리 경로 설정
 if platform.system() == 'Windows': # Windows
     data_dir = './data/mit-bih-arrhythmia-database-1.0.0/'
 elif platform.system() == 'Darwin': # macOS
     data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
+elif platform.system() == 'Linux': # Linux
+    data_dir = './data/mit-bih-arrhythmia-database-1.0.0/'
 else:
     raise Exception("Unsupported OS") # 지원하지 않는 운영체제 예외 처리
+
 record_ids = ['207']  # 사용할 레코드 ID 목록
 
 # 세그먼트 길이 및 ECG 채널 설정
@@ -23,7 +31,7 @@ channel_index = 0  # ECG 채널 선택 (MLII 채널)
 
 # 각 레코드 ID에 대해 처리
 for record_id in record_ids:
-    # 1. 레코드 읽기
+    # 1. 레코드 읽기 (ECG 신호 및 주석)
     record = wfdb.rdrecord(os.path.join(data_dir, record_id))  # ECG 신호 데이터 읽기
     annotation = wfdb.rdann(os.path.join(data_dir, record_id), 'atr')  # 주석 데이터 읽기
     
@@ -32,7 +40,7 @@ for record_id in record_ids:
     sampling_rate = record.fs  # 샘플링 주파수 
     total_len = len(ecg_signal)  # 신호 데이터의 전체 길이
 
-    # 3. BioSPPy로 ECG 분석
+    # 3. BioSPPy로 ECG 분석 (R-peak 검출 및 필터링)
     ecg_result = biosppy.signals.ecg.ecg(signal=ecg_signal, sampling_rate=sampling_rate, show=False)
     rpeaks = ecg_result['rpeaks']  # R-peak 위치 추출
     filtered_ecg = ecg_result['filtered']  # 필터링된 ECG 신호
@@ -50,7 +58,7 @@ for record_id in record_ids:
         segment_signal = filtered_ecg[start:end]  # 현재 세그먼트의 신호 데이터 추출
         ax_ecg.plot(segment_signal, label='ECG Signal', color='black')  # ECG 신호 플롯
 
-        # 주석 데이터 표시
+        # 주석 데이터 표시 (심장 박동 종류 등)
         for i in range(len(annotation.sample)):
             pos = annotation.sample[i]  # 주석 위치
             if start <= pos < end:  # 현재 세그먼트 내에 있는 주석만 표시
@@ -59,7 +67,7 @@ for record_id in record_ids:
                 ax_ecg.text(rel_pos, filtered_ecg[pos] + 0.2, annotation.symbol[i],  # 주석 심볼 표시
                             rotation=90, fontsize=8, color='red')
 
-        # R-peak 데이터 표시
+        # R-peak 데이터 표시 (녹색 점)
         for peak in rpeaks:
             if start <= peak < end:  # 현재 세그먼트 내에 있는 R-peak만 표시
                 rel_peak = peak - start  # 세그먼트 내 상대 위치 계산
@@ -83,7 +91,7 @@ for record_id in record_ids:
         fig.canvas.draw()  # 플롯 업데이트
 
     def on_key(event):
-        """키보드 이벤트 핸들러"""
+        """키보드 이벤트 핸들러: 좌/우 방향키로 세그먼트 이동, q/Escape로 종료"""
         global start
         if event.key == 'right':  # 오른쪽 키를 누르면 다음 세그먼트로 이동
             start += segment_length  # 시작 위치를 다음 세그먼트로 이동

@@ -1,3 +1,9 @@
 .DS_Store
 
 data/
+code/EdgeECG/
+ecg_autoencoder_savedmodel/
+*.csv
+*.cc
+*.tflite
+*.npz

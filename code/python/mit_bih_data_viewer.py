@@ -1,3 +1,10 @@
+"""
+MIT-BIH 부정맥 데이터베이스의 ECG(심전도) 신호를 읽고, 주석(annotation) 및 R-peak 정보를 시각적으로 확인할 수 있는 뷰어입니다.
+- wfdb 라이브러리로 ECG 신호와 주석 데이터를 읽어옵니다.
+- biosppy 라이브러리로 R-peak(심장 박동의 R파) 위치를 검출합니다.
+- matplotlib을 이용해 신호, 주석, R-peak를 구간별로 시각화하며, 키보드(좌/우/ESC/q)로 구간을 이동하거나 종료할 수 있습니다.
+"""
+
 import wfdb  # WFDB 라이브러리: ECG 데이터 읽기 및 주석 처리
 import biosppy  # BioSPPy 라이브러리: ECG 신호 분석
 import os  # 파일 및 디렉토리 경로 관리
@@ -7,9 +14,9 @@ import matplotlib.pyplot as plt  # 데이터 시각화를 위한 Matplotlib
 # MIT-BIH 데이터셋에서 ECG 신호를 읽고 시각화하는 코드
 
 # 데이터 디렉토리 경로 및 사용할 레코드 ID 목록 설정
-if platform.system() == 'Windows': # Windows
+if platform.system() == 'Windows': # Windows 환경일 때 데이터 경로 지정
     data_dir = './data/mit-bih-arrhythmia-database-1.0.0/'
-elif platform.system() == 'Darwin': # macOS
+elif platform.system() == 'Darwin': # macOS 환경일 때 데이터 경로 지정
     data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
 else:
     raise Exception("Unsupported OS") # 지원하지 않는 운영체제 예외 처리
@@ -21,16 +28,16 @@ channel_index = 0  # ECG 채널 선택 (MLII 채널)
 
 # 각 레코드 ID에 대해 처리
 for record_id in record_ids:
-    # 1. 레코드 읽기
+    # 1. 레코드 읽기: ECG 신호와 주석(annotation) 데이터 불러오기
     record = wfdb.rdrecord(os.path.join(data_dir, record_id))  # ECG 신호 데이터 읽기
     annotation = wfdb.rdann(os.path.join(data_dir, record_id), 'atr')  # 주석 데이터 읽기
     
-    # 2. 신호 데이터 추출
+    # 2. 신호 데이터 추출: 선택한 채널의 신호와 샘플링 주파수, 전체 길이 추출
     ecg_signal = record.p_signal[:, channel_index]  # 선택한 채널의 신호 데이터 추출
     sampling_rate = record.fs  # 샘플링 주파수 
     total_len = len(ecg_signal)  # 신호 데이터의 전체 길이
 
-    # 3. BioSPPy로 ECG 분석
+    # 3. BioSPPy로 ECG 분석: R-peak(심장 박동의 R파) 위치 검출
     ecg_result = biosppy.signals.ecg.ecg(signal=ecg_signal, sampling_rate=sampling_rate, show=False)
     rpeaks = ecg_result['rpeaks']  # R-peak 위치 추출
 
@@ -45,7 +52,7 @@ for record_id in record_ids:
         end = min(start + segment_length, total_len)  # 현재 세그먼트의 끝 위치 계산
         ax.plot(ecg_signal[start:end], label='ECG Signal', color='black')  # ECG 신호 플롯
 
-        # 주석 데이터 표시
+        # 주석 데이터 표시: 현재 세그먼트 내의 주석 위치에 수직선과 심볼 표시
         for i in range(len(annotation.sample)):
             pos = annotation.sample[i]  # 주석 위치
             if start <= pos < end:  # 현재 세그먼트 내에 있는 주석만 표시
@@ -54,7 +61,7 @@ for record_id in record_ids:
                 ax.text(rel_pos, ecg_signal[pos] + 0.2, annotation.symbol[i],  # 주석 심볼 표시
                         rotation=90, fontsize=8, color='red')
 
-        # R-peak 데이터 표시
+        # R-peak 데이터 표시: 현재 세그먼트 내의 R-peak 위치에 녹색 점 표시
         for peak in rpeaks:
             if start <= peak < end:  # 현재 세그먼트 내에 있는 R-peak만 표시
                 rel_peak = peak - start  # 세그먼트 내 상대 위치 계산
@@ -69,7 +76,7 @@ for record_id in record_ids:
         fig.canvas.draw()  # 플롯 업데이트
 
     def on_key(event):
-        """키보드 이벤트 핸들러"""
+        """키보드 이벤트 핸들러: 좌/우 방향키로 세그먼트 이동, q/ESC로 종료"""
         global start
         if event.key == 'right':  # 오른쪽 키를 누르면 다음 세그먼트로 이동
             start += segment_length  # 시작 위치를 다음 세그먼트로 이동

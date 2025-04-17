@@ -1,10 +1,19 @@
+"""
+MIT-BIH 부정맥 데이터베이스의 ECG 신호를 읽고, 필터링 및 분석하여
+세그먼트 단위로 시각화하는 프로그램입니다.
+
+- WFDB로 ECG 신호 및 주석(annotation) 데이터를 읽어옵니다.
+- BioSPPy로 ECG 신호를 필터링하고 R-peak를 검출합니다.
+- Matplotlib을 이용해 세그먼트별로 ECG 신호, 주석, R-peak를 시각화합니다.
+- Recurrence Plot을 생성하여 신호의 패턴을 추가로 시각화합니다.
+- 키보드(→, ←, q, ESC)로 세그먼트 탐색 및 종료가 가능합니다.
+"""
+
 import wfdb  # WFDB 라이브러리: ECG 데이터 읽기 및 주석 처리
 import biosppy  # BioSPPy 라이브러리: ECG 신호 분석
 import os  # 파일 및 디렉토리 경로 관리
 import matplotlib.pyplot as plt  # 데이터 시각화를 위한 Matplotlib
 import numpy as np  # 수치 계산을 위한 NumPy
-
-# MIT-BIH 데이터셋에서 ECG 신호를 읽고 시각화하는 코드
 
 # 데이터 디렉토리 경로 및 사용할 레코드 ID 목록 설정
 data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
@@ -69,13 +78,16 @@ for record_id in record_ids:
         ax_rp.clear()  # 이전 Recurrence plot 초기화
         rp = biosppy.features.phase_space.compute_recurrence_plot(segment_signal) # Recurrence plot 생성
         ax_rp.imshow(rp[0], cmap='gray', aspect='auto', interpolation='nearest')
-        # ax_rp.plot(segment_signal, label='ECG Signal', color='red')  # ECG 신호 플롯
         ax_rp.set_title('Recurrence Plot')  # Recurrence plot 제목 설정
 
         fig.canvas.draw()  # 플롯 업데이트
 
     def on_key(event):
-        """키보드 이벤트 핸들러"""
+        """키보드 이벤트 핸들러
+        - 오른쪽 화살표: 다음 세그먼트로 이동
+        - 왼쪽 화살표: 이전 세그먼트로 이동
+        - q 또는 ESC: 종료
+        """
         global start
         if event.key == 'right':  # 오른쪽 키를 누르면 다음 세그먼트로 이동
             start += segment_length  # 시작 위치를 다음 세그먼트로 이동

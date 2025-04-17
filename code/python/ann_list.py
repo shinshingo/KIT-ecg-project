@@ -1,3 +1,11 @@
+# -----------------------------------------------------------------------------
+# MIT-BIH 부정맥 데이터베이스의 각 레코드별로 부정맥 심볼(라벨) 출현 빈도를 집계하여
+# CSV 파일로 저장하는 스크립트입니다.
+# - 데이터 디렉토리에서 레코드 목록을 자동 추출합니다.
+# - 각 레코드의 annotation(주석) 파일을 읽어 심볼별 개수를 셉니다.
+# - 심볼별 의미(라벨명)도 함께 매핑하여 결과를 저장합니다.
+# -----------------------------------------------------------------------------
+
 import wfdb
 import os
 import pandas as pd
@@ -51,59 +59,57 @@ annotation_labels = {
     '@': 'Link to external data',
 }
 
-# 데이터 디렉토리 경로 및 사용할 레코드 ID 목록 설정
+# 운영체제에 따라 데이터 디렉토리 경로 설정
 if platform.system() == 'Windows': # Windows
     data_dir = './data/mit-bih-arrhythmia-database-1.0.0/'
 elif platform.system() == 'Darwin': # macOS
     data_dir = 'data/mit-bih-arrhythmia-database-1.0.0/'
+elif platform.system() == 'Linux': # Linux
+    data_dir = './data/mit-bih-arrhythmia-database-1.0.0/'
 else:
     raise Exception("Unsupported OS") # 지원하지 않는 운영체제 예외 처리
 
-# 자동으로 레코드 ID 추출
+# 데이터 디렉토리에서 레코드 ID 목록 자동 추출 (.hed 파일 기준)
 record_ids = sorted(set(
     os.path.splitext(f)[0]
     for f in os.listdir(data_dir)
-    if f.endswith('.atr') or f.endswith('.dat')
+    if f.endswith('.hed')
 ))
 
-# 부정맥 심볼 카운트
+# 각 레코드별로 annotation 파일을 읽어 심볼별 개수 집계
 record_symbol_counts = []
 all_symbols = set()
 
 for rec in record_ids:
     try:
-        ann = wfdb.rdann(os.path.join(data_dir, rec), 'atr')
-        symbol_count = Counter(ann.symbol)
-        all_symbols.update(symbol_count.keys())
-        record_symbol_counts.append({'record': rec, **symbol_count})
+        ann = wfdb.rdann(os.path.join(data_dir, rec), 'atr')  # annotation 파일 읽기
+        symbol_count = Counter(ann.symbol)                    # 심볼별 개수 세기
+        all_symbols.update(symbol_count.keys())               # 전체 심볼 집합 갱신
+        record_symbol_counts.append({'record': rec, **symbol_count})  # 결과 저장
     except Exception as e:
         print(f"Failed to load {rec}: {e}")
 
-# DataFrame 정리
+# 집계 결과를 DataFrame으로 변환 및 결측값 처리
 df = pd.DataFrame(record_symbol_counts)
 df = df.fillna(0).astype({sym: int for sym in all_symbols})
 df = df[['record'] + sorted(all_symbols)]
 
-
-# 라벨 정렬 순서 유지
+# 라벨(심볼) 정렬 및 의미 매핑
 ordered_symbols = sorted(all_symbols)
-
-# 라벨 이름 딕셔너리 → 리스트로 매핑
 label_names = [annotation_labels.get(sym, 'Unknown') for sym in ordered_symbols]
 
-# 라벨 이름을 첫 줄에 추가해 테이블 위에 붙일 수도 있고, 새 파일로 만들 수도 있음
+# 컬럼명에 라벨명 추가
 df_with_labels = df.copy()
 df_with_labels.columns = ['record'] + [f'{sym} ({name})' for sym, name in zip(ordered_symbols, label_names)]
 
-# 파일 저장 경로
+# 결과를 CSV 파일로 저장
 output_path = os.path.join(data_dir, 'arrhythmia_label_stats.csv')
 print(f"Saving to {output_path}")
 
-# CSV로 저장
-df_with_labels.to_csv(output_path, index=False, encoding='utf-8-sig')  # Excel에서 열기 편하도록 utf-8-sig 사용
+df_with_labels.to_csv(output_path, index=False, encoding='utf-8-sig')  # Excel 호환 인코딩
 
 print(f"저장완료: {output_path}")
 
-# 출력
+# (선택) DataFrame을 사용자에게 표시하는 코드 (주석 처리)
 # import ace_tools_open as tools; tools.display_dataframe_to_user(name="레코드별 부정맥 라벨 통계", dataframe=df)
 
